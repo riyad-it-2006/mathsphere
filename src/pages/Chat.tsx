@@ -11,7 +11,7 @@ import {
   Brain,
   X
 } from "lucide-react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc, where, limit, setDoc } from "firebase/firestore";
 import { db } from "@/src/lib/firebase";
@@ -143,12 +143,12 @@ export const Chat = () => {
             const isMe = msg.senderId === user?.uid;
             return (
               <div key={msg.id} className={cn("flex gap-4 group animate-in fade-in slide-in-from-bottom-4 duration-500", isMe ? "flex-row-reverse" : "")}>
-                <Link href={`/profile/${msg.senderId}`} className="h-10 w-10 shrink-0 rounded-2xl bg-white/5 border border-white/10 overflow-hidden hover:scale-110 transition-transform shadow-xl">
+                <Link to={`/profile/${msg.senderId}`} className="h-10 w-10 shrink-0 rounded-2xl bg-white/5 border border-white/10 overflow-hidden hover:scale-110 transition-transform shadow-xl">
                   <img src={(msg as any).senderPhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.senderId}`} alt="avatar" className="h-full w-full object-cover" />
                 </Link>
                 <div className={cn("space-y-1.5 max-w-[75%] md:max-w-[60%]", isMe ? "items-end flex flex-col" : "")}>
                   <div className="flex items-center gap-2 px-1">
-                    <Link href={`/profile/${msg.senderId}`} className="text-[10px] font-black text-white hover:text-orange-500 uppercase tracking-widest">{msg.senderName}</Link>
+                    <Link to={`/profile/${msg.senderId}`} className="text-[10px] font-black text-white hover:text-orange-500 uppercase tracking-widest">{msg.senderName}</Link>
                     <span className="text-[8px] text-gray-600 font-bold">{msg.createdAt ? formatDate(msg.createdAt) : "Just now"}</span>
                   </div>
                   <div className={cn(

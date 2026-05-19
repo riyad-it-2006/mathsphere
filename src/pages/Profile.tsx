@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
+import { useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { Shield, Mail, Calendar, Hash, Award, Edit3, User as UserIcon, Save, X, Camera, FileUp, Facebook, Phone, ExternalLink, AtSign, Loader2 } from "lucide-react";
 import { useAuth } from "@/src/hooks/useAuth";
@@ -10,9 +9,8 @@ import { db, storage } from "@/src/lib/firebase";
 import { UserProfile } from "@/src/types";
 import { cn } from "@/src/lib/utils";
 
-export const Profile = ({ userId }: { userId?: string }) => {
-  const params = useParams();
-  const paramUid = userId || (params?.uid as string);
+export const Profile = () => {
+  const { uid: paramUid } = useParams();
   const { profile: loggedInProfile, user: currentUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -182,7 +180,7 @@ export const Profile = ({ userId }: { userId?: string }) => {
     return (
       <div className="text-center p-20 glass-card">
         <h2 className="text-2xl font-black text-white">Profile not found</h2>
-        <Link href="/" className="text-orange-500 hover:underline mt-4 inline-block">Return to Home</Link>
+        <Link to="/" className="text-orange-500 hover:underline mt-4 inline-block">Return to Home</Link>
       </div>
     );
   }

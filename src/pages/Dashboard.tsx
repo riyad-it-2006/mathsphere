@@ -12,7 +12,7 @@ import {
   Brain
 } from "lucide-react";
 import { motion } from "motion/react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { collection, getDocs, addDoc, serverTimestamp, query, limit, where } from "firebase/firestore";
 import { db } from "@/src/lib/firebase";
 
@@ -103,10 +103,10 @@ export const Dashboard = () => {
             {t.heroSub}
           </p>
           <div className="flex flex-wrap gap-4 pt-4">
-            <Link href="/discussions" className="rounded-2xl bg-white px-8 py-4 text-sm font-black text-orange-600 shadow-xl transition-transform hover:scale-105 active:scale-95">
+            <Link to="/discussions" className="rounded-2xl bg-white px-8 py-4 text-sm font-black text-orange-600 shadow-xl transition-transform hover:scale-105 active:scale-95">
               {t.startDisc}
             </Link>
-            <Link href="/notes" className="rounded-2xl bg-orange-600 px-8 py-4 text-sm font-black text-white shadow-xl transition-transform hover:scale-105 active:scale-95 border border-white/10">
+            <Link to="/notes" className="rounded-2xl bg-orange-600 px-8 py-4 text-sm font-black text-white shadow-xl transition-transform hover:scale-105 active:scale-95 border border-white/10">
               {t.browseNotes}
             </Link>
           </div>
@@ -128,7 +128,7 @@ export const Dashboard = () => {
             <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-orange-500" /> {t.deptActivity}
             </h2>
-            <Link href="/discussions" className="text-xs font-bold text-orange-500 hover:underline flex items-center gap-1">
+            <Link to="/discussions" className="text-xs font-bold text-orange-500 hover:underline flex items-center gap-1">
               {t.viewAll} <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
@@ -185,32 +185,32 @@ export const Dashboard = () => {
               <div className="absolute -right-4 -bottom-4 h-16 w-16 bg-blue-500/20 blur-2xl group-hover:bg-blue-500/40 transition-colors" />
             </div>
           </div>
-          <Link href="/notices" className="w-full block text-center rounded-2xl border border-white/10 bg-white/5 py-4 text-xs font-bold text-gray-400 hover:bg-white/10 hover:text-white transition-all uppercase tracking-widest">
+          <Link to="/notices" className="w-full block text-center rounded-2xl border border-white/10 bg-white/5 py-4 text-xs font-bold text-gray-400 hover:bg-white/10 hover:text-white transition-all uppercase tracking-widest">
             {t.viewNoticeBoard}
           </Link>
         </div>
 
         {/* Categories / Sections */}
         <div className="lg:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-6">
-          <Link href="/chat" className="glass-card p-6 flex flex-col items-center text-center gap-3 hover:border-orange-500/30 transition-all group cursor-pointer">
+          <Link to="/chat" className="glass-card p-6 flex flex-col items-center text-center gap-3 hover:border-orange-500/30 transition-all group cursor-pointer">
             <div className="h-14 w-14 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform">
               <MessageSquare className="h-7 w-7" />
             </div>
             <span className="text-sm font-bold text-white whitespace-nowrap">{t.groupChat}</span>
           </Link>
-          <Link href="/notes" className="glass-card p-6 flex flex-col items-center text-center gap-3 hover:border-blue-500/30 transition-all group cursor-pointer">
+          <Link to="/notes" className="glass-card p-6 flex flex-col items-center text-center gap-3 hover:border-blue-500/30 transition-all group cursor-pointer">
             <div className="h-14 w-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
               <FileText className="h-7 w-7" />
             </div>
             <span className="text-sm font-bold text-white whitespace-nowrap">{t.notesDocs}</span>
           </Link>
-          <Link href="/discussions" className="glass-card p-6 flex flex-col items-center text-center gap-3 hover:border-green-500/30 transition-all group cursor-pointer">
+          <Link to="/discussions" className="glass-card p-6 flex flex-col items-center text-center gap-3 hover:border-green-500/30 transition-all group cursor-pointer">
             <div className="h-14 w-14 rounded-2xl bg-green-500/10 flex items-center justify-center text-green-500 group-hover:scale-110 transition-transform">
               <Users className="h-7 w-7" />
             </div>
             <span className="text-sm font-bold text-white whitespace-nowrap">{t.discussions}</span>
           </Link>
-          <Link href="/ai" className="glass-card p-6 flex flex-col items-center text-center gap-3 hover:border-purple-500/30 transition-all group cursor-pointer">
+          <Link to="/ai" className="glass-card p-6 flex flex-col items-center text-center gap-3 hover:border-purple-500/30 transition-all group cursor-pointer">
             <div className="h-14 w-14 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500 group-hover:scale-110 transition-transform">
               <Brain className="h-7 w-7" />
             </div>

@@ -11,7 +11,7 @@ import {
   Filter,
   Calculator
 } from "lucide-react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/src/lib/firebase";
@@ -171,7 +171,7 @@ export const Discussions = () => {
 
                   {/* Content Side */}
                   <div className="flex-1 space-y-3">
-                    <Link href={`/profile/${post.authorId}`} className="flex items-center gap-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest hover:text-orange-500 transition-colors">
+                    <Link to={`/profile/${post.authorId}`} className="flex items-center gap-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest hover:text-orange-500 transition-colors">
                       <UserIcon className="h-3 w-3" /> {post.authorName} • <Clock className="h-3 w-3" /> {post.createdAt ? formatDate(post.createdAt) : "Just now"}
                     </Link>
                     <h2 className="text-xl font-bold text-white group-hover:text-orange-400 transition-colors">{post.title}</h2>

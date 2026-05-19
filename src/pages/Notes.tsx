@@ -17,7 +17,7 @@ import {
   File as FileIcon,
   AlertCircle
 } from "lucide-react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -267,11 +267,11 @@ export const Notes = () => {
                 <p className="text-xs text-gray-500 mt-2 line-clamp-2">{note.description}</p>
               )}
               <div className="mt-4 flex items-center gap-2 pt-4 border-t border-white/5">
-                <Link href={`/profile/${note.uploaderId}`} className="h-8 w-8 rounded-full bg-gray-700 flex-shrink-0 hover:scale-110 transition-transform overflow-hidden">
+                <Link to={`/profile/${note.uploaderId}`} className="h-8 w-8 rounded-full bg-gray-700 flex-shrink-0 hover:scale-110 transition-transform overflow-hidden">
                   <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${note.uploaderId}`} alt="avatar" />
                 </Link>
                 <div className="flex flex-col">
-                  <Link href={`/profile/${note.uploaderId}`} className="text-[10px] font-black text-white hover:underline hover:text-blue-500 transition-colors">
+                  <Link to={`/profile/${note.uploaderId}`} className="text-[10px] font-black text-white hover:underline hover:text-blue-500 transition-colors">
                     {(note as any).uploaderName || "Anonymous"}
                   </Link>
                   <span className="text-[10px] text-gray-500">Member ID: {note.uploaderId.slice(0, 6)}</span>
