@@ -4,7 +4,14 @@ import { Brain, Sparkles, ArrowRight, ShieldCheck, Mail } from "lucide-react";
 import { useAuth } from "@/src/hooks/useAuth";
 
 export const Login = () => {
-  const { login } = useAuth();
+  const { login, authError } = useAuth();
+  const [isLoggingIn, setIsLoggingIn] = React.useState(false);
+
+  const handleLogin = async () => {
+    setIsLoggingIn(true);
+    await login();
+    setIsLoggingIn(false);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#050505] math-gradient p-6">
@@ -60,12 +67,29 @@ export const Login = () => {
           </div>
 
           <div className="space-y-4">
+            {authError && (
+              <motion.div 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold text-center"
+              >
+                {authError}
+              </motion.div>
+            )}
+
             <button 
-              onClick={login}
-              className="w-full flex items-center justify-center gap-4 rounded-[2rem] bg-white px-8 py-5 text-sm font-black text-black hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl"
+              onClick={handleLogin}
+              disabled={isLoggingIn}
+              className="w-full flex items-center justify-center gap-4 rounded-[2rem] bg-white px-8 py-5 text-sm font-black text-black hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl disabled:opacity-50 disabled:cursor-not-allowed group"
             >
-              <img src="https://www.google.com/favicon.ico" alt="google" className="h-5 w-5" />
-              Continue with Google
+              {isLoggingIn ? (
+                <div className="h-5 w-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <img src="https://www.google.com/favicon.ico" alt="google" className="h-5 w-5 group-hover:rotate-12 transition-transform" />
+                  Continue with Google
+                </>
+              )}
             </button>
             
             <button className="w-full flex items-center justify-center gap-4 rounded-[2rem] bg-white/5 border border-white/10 px-8 py-5 text-sm font-bold text-gray-400 hover:text-white hover:bg-white/10 transition-all">
