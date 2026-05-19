@@ -1,0 +1,11 @@
+{
+  "name": "MathSphere",
+  "description": "A premium community platform for the Mathematics Department of Govt. Bhola College featuring real-time chat, LaTeX discussions, AI study assistants, and document sharing.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,129 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "batch": { "type": "string" },
+        "session": { "type": "string" },
+        "bio": { "type": "string" },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "role": { "type": "string", "enum": ["student", "cr", "teacher", "admin"] },
+        "isVerified": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "ChatRoom": {
+      "title": "Chat Room",
+      "description": "A conversation group or private chat",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["public", "batch", "private"] },
+        "batch": { "type": "string" },
+        "members": { "type": "array", "items": { "type": "string" } },
+        "lastMessage": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A message within a chat room",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "text": { "type": "string" },
+        "voiceUrl": { "type": "string" },
+        "replyTo": { "type": "string" },
+        "reactions": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Discussion": {
+      "title": "Discussion",
+      "description": "A forum-style post for knowledge sharing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "upvotes": { "type": "integer" },
+        "downvotes": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Note": {
+      "title": "Note",
+      "description": "Study material or document sharing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uploaderId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "fileType": { "type": "string" },
+        "year": { "type": "string" },
+        "semester": { "type": "string" },
+        "courseCode": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Notice": {
+      "title": "Notice",
+      "description": "Official announcement from college or admins",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "authorId": { "type": "string" },
+        "isPinned": { "type": "boolean" },
+        "type": { "type": "string", "enum": ["exam", "class", "assignment", "general"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/chatRooms/{roomId}": {
+      "schema": "ChatRoom",
+      "description": "Chat rooms metadata"
+    },
+    "/chatRooms/{roomId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages per chat room"
+    },
+    "/discussions/{discussionId}": {
+      "schema": "Discussion",
+      "description": "Knowledge sharing posts"
+    },
+    "/discussions/{discussionId}/comments/{commentId}": {
+      "schema": "Message",
+      "description": "Comments on discussions"
+    },
+    "/notes/{noteId}": {
+      "schema": "Note",
+      "description": "Shared study materials"
+    },
+    "/notices/{noticeId}": {
+      "schema": "Notice",
+      "description": "Official announcements"
+    }
+  }
+}

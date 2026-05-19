@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isVerified() { return request.auth.token.email_verified == true; }
+    
+    function getUserData(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+    
+    function isAdmin() {
+      let data = getUserData(request.auth.uid);
+      return isSignedIn() && (
+        (data != null && data.role == 'admin') || 
+        request.auth.token.email == 'skriyad0131@gmail.com'
+      );
+    }
+
+    function isTeacher() {
+      let data = getUserData(request.auth.uid);
+      return isSignedIn() && data != null && data.role == 'teacher';
+    }
+
+    // User Profiles
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId) && incoming().role == 'student';
+      allow update: if isOwner(userId) || isAdmin();
+    }
+
+    // Username mapping for uniqueness
+    match /usernames/{username} {
+      allow read: if true;
+      allow create: if isSignedIn() && incoming().uid == request.auth.uid;
+      allow delete: if isSignedIn() && existing().uid == request.auth.uid;
+    }
+
+    // Chat Rooms
+    match /chatRooms/{roomId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (request.auth.uid in existing().members || isAdmin());
+    }
+
+    // Messages
+    match /chatRooms/{roomId}/messages/{messageId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && incoming().senderId == request.auth.uid;
+      allow delete: if isAdmin() || isOwner(existing().senderId);
+    }
+
+    // Discussions
+    match /discussions/{discussionId} {
+      allow read: if true;
+      allow create: if isSignedIn() && incoming().authorId == request.auth.uid;
+      allow update: if (isOwner(existing().authorId) && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'content', 'tags', 'upvotes', 'downvotes'])) || isAdmin();
+      allow delete: if isOwner(existing().authorId) || isAdmin();
+    }
+
+    // Notes
+    match /notes/{noteId} {
+      allow read: if true;
+      allow create: if isSignedIn() && (isTeacher() || isAdmin() || getUserData(request.auth.uid).role == 'cr');
+      allow delete: if isAdmin() || isOwner(existing().uploaderId);
+    }
+
+    // Notices
+    match /notices/{noticeId} {
+      allow read: if true;
+      allow create: if isAdmin() || isTeacher() || getUserData(request.auth.uid).role == 'cr';
+      allow update: if isAdmin() || isTeacher() || getUserData(request.auth.uid).role == 'cr';
+      allow delete: if isAdmin();
+    }
+  }
+}
