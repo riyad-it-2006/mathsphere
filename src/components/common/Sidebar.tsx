@@ -1,5 +1,6 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { 
   Home, 
   MessageSquare, 
@@ -24,7 +25,7 @@ const menuItems = [
 ];
 
 export const Sidebar = () => {
-  const location = useLocation();
+  const pathname = usePathname();
 
   return (
     <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col border-r border-white/10 bg-[#0a0a0a]/80 backdrop-blur-xl lg:flex">
@@ -40,11 +41,11 @@ export const Sidebar = () => {
 
       <nav className="flex-1 space-y-1 px-3">
         {menuItems.map((item) => {
-          const isActive = location.pathname === item.path;
+          const isActive = pathname === item.path;
           return (
             <Link
               key={item.path}
-              to={item.path}
+              href={item.path}
               className={cn(
                 "group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200",
                 isActive 

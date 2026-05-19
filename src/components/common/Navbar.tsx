@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { Search, Bell, Command, ArrowLeft, UserCircle, Brain, Languages } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { collection, query, onSnapshot, orderBy, limit } from "firebase/firestore";
@@ -7,25 +8,27 @@ import { db } from "@/src/lib/firebase";
 import { useAuth } from "@/src/hooks/useAuth";
 
 export const Navbar = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter();
+  const pathname = usePathname();
   const { profile } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
-  const [lang, setLang] = useState(localStorage.getItem("app_lang") || "en");
-  const isDashboard = location.pathname === "/";
+  const [lang, setLang] = useState(typeof window !== "undefined" ? localStorage.getItem("app_lang") || "en" : "en");
+  const isDashboard = pathname === "/";
 
   const toggleLang = () => {
     const newLang = lang === "en" ? "bn" : "en";
     setLang(newLang);
-    localStorage.setItem("app_lang", newLang);
-    window.location.reload(); 
+    if (typeof window !== "undefined") {
+      localStorage.setItem("app_lang", newLang);
+      window.location.reload(); 
+    }
   };
 
   useEffect(() => {
     // Real-time notices listener for badge
     const q = query(collection(db, "notices"), orderBy("createdAt", "desc"), limit(20));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const lastSeen = localStorage.getItem("last_seen_notice_time") || "0";
+      const lastSeen = typeof window !== "undefined" ? localStorage.getItem("last_seen_notice_time") || "0" : "0";
       let count = 0;
       snapshot.docs.forEach(doc => {
         const data = doc.data();
@@ -37,21 +40,21 @@ export const Navbar = () => {
       setUnreadCount(count);
     });
     return () => unsubscribe();
-  }, [location.pathname]);
+  }, [pathname]);
 
   // Reset count when visiting notices page
   useEffect(() => {
-    if (location.pathname === "/notices") {
+    if (pathname === "/notices" && typeof window !== "undefined") {
       localStorage.setItem("last_seen_notice_time", Date.now().toString());
       setUnreadCount(0);
     }
-  }, [location.pathname]);
+  }, [pathname]);
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-[#0a0a0a]/60 backdrop-blur-md px-6">
       <div className="flex h-16 items-center justify-between gap-4">
         <div className="flex items-center gap-4 flex-1">
-          <Link to="/" className="lg:hidden flex items-center gap-2 mr-2">
+          <Link href="/" className="lg:hidden flex items-center gap-2 mr-2">
             <div className="h-8 w-8 rounded-lg bg-orange-500 flex items-center justify-center">
               <Brain className="h-5 w-5 text-white" />
             </div>
@@ -60,7 +63,7 @@ export const Navbar = () => {
           {!isDashboard && (
             <motion.button
               whileHover={{ x: -2 }}
-              onClick={() => navigate(-1)}
+              onClick={() => router.back()}
               className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-gray-400 hover:text-white border border-white/5 shrink-0"
             >
               <ArrowLeft className="h-5 w-5" />
@@ -90,10 +93,10 @@ export const Navbar = () => {
             <span>{lang === "en" ? "English" : "বাংলা"}</span>
           </motion.button>
 
-          <Link to="/profile" className="flex items-center gap-3 rounded-2xl bg-white/5 p-1.5 pr-4 border border-white/5 hover:bg-white/10 transition-all group shrink-0">
+          <Link href="/profile" className="flex items-center gap-3 rounded-2xl bg-white/5 p-1.5 pr-4 border border-white/5 hover:bg-white/10 transition-all group shrink-0">
             <div className="h-8 w-8 rounded-xl bg-orange-500/20 flex items-center justify-center overflow-hidden">
               {profile?.photoURL ? (
-                <img src={profile.photoURL} alt="avatar" className="h-full w-full object-cover" />
+                <img src={profile.photoURL} alt="avatar" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
               ) : (
                 <UserCircle className="h-5 w-5 text-orange-500" />
               )}
@@ -108,7 +111,7 @@ export const Navbar = () => {
 
           <div className="h-8 w-px bg-white/10 mx-1 hidden sm:block" />
 
-          <Link to="/notices" className="relative group shrink-0">
+          <Link href="/notices" className="relative group shrink-0">
             <motion.div 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
