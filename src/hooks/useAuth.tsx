@@ -1,97 +1,371 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp, getDocFromServer } from "firebase/firestore";
-import { auth, db, signInWithGoogle } from "@/src/lib/firebase";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/src/lib/firebase";
+import { supabase, hasSupabaseKeys } from "@/src/lib/supabase";
 import { UserProfile } from "@/src/types";
 
+interface ActiveUser {
+  uid: string;
+  email: string | null;
+  displayName?: string | null;
+  photoURL?: string | null;
+}
+
 interface AuthContextType {
-  user: User | null;
+  user: ActiveUser | null;
   profile: UserProfile | null;
   loading: boolean;
   authError: string | null;
   login: () => Promise<void>;
   logout: () => Promise<void>;
+  loginWithPhone: (phone: string, password: string) => Promise<void>;
+  registerWithPhone: (name: string, phone: string, email: string, password: string) => Promise<void>;
+  sendPasswordReset: (input: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<ActiveUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Connection test
-    const testConnection = async () => {
+    let active = true;
+
+    const syncProfileFromFirestore = async (uid: string, fallbackEmail: string, fallbackName: string, fallbackPhoto: string) => {
       try {
-        await getDocFromServer(doc(db, "_connection_test_", "ping"));
-      } catch (error: any) {
-        if (error.message?.includes("offline") || error.code === "unavailable") {
-          console.error("Firebase is offline or unavailable:", error);
-          setAuthError("Could not connect to Firebase. Please check your internet connection.");
+        const userDoc = doc(db, "users", uid);
+        const snapshot = await getDoc(userDoc);
+        if (!active) return;
+
+        if (snapshot.exists()) {
+          setProfile(snapshot.data() as UserProfile);
+        } else {
+          // Create user profile in Firestore so it remains searchable and syncs with chatting/academic modules
+          const newProfileData = {
+            uid,
+            displayName: fallbackName || "GBC Student",
+            email: fallbackEmail || "",
+            photoURL: fallbackPhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(uid)}`,
+            role: "student",
+            isVerified: false,
+            createdAt: serverTimestamp(),
+          };
+          await setDoc(userDoc, newProfileData);
+          if (active) {
+            setProfile({ ...newProfileData, createdAt: new Date().toISOString() } as any);
+          }
+        }
+      } catch (err) {
+        console.error("Firestore user profile sync failed:", err);
+        if (active) {
+          setAuthError("Auth synced, but profile matching failed. Please check connection.");
         }
       }
     };
-    testConnection();
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setAuthError(null);
-      setUser(user);
-      if (user) {
-        try {
-          // Fetch or create profile
-          const userDoc = doc(db, "users", user.uid);
-          const snapshot = await getDoc(userDoc);
-          
-          if (snapshot.exists()) {
-            setProfile(snapshot.data() as UserProfile);
-          } else {
-            const newProfileData = {
-              uid: user.uid,
-              displayName: user.displayName || "GBC Student",
-              email: user.email || "",
-              photoURL: user.photoURL || "",
-              role: "student",
-              isVerified: false,
-              createdAt: serverTimestamp(),
-            };
-            await setDoc(userDoc, newProfileData);
-            setProfile({ ...newProfileData, createdAt: new Date().toISOString() } as UserProfile);
-          }
-        } catch (error) {
-          console.error("Profile sync failed:", error);
-          setAuthError("Failed to sync user profile. Check your internet connection or try again.");
+    const handleUserSession = async (sessionUser: any) => {
+      if (!sessionUser) {
+        if (active) {
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
         }
-      } else {
-        setProfile(null);
+        return;
       }
-      setLoading(false);
+
+      const mapped: ActiveUser = {
+        uid: sessionUser.id,
+        email: sessionUser.email || null,
+        displayName: sessionUser.user_metadata?.displayName || sessionUser.email?.split("@")[0] || "GBC Student",
+        photoURL: sessionUser.user_metadata?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(sessionUser.id)}`
+      };
+
+      if (active) {
+        setUser(mapped);
+      }
+
+      await syncProfileFromFirestore(
+        sessionUser.id, 
+        sessionUser.email || "", 
+        sessionUser.user_metadata?.displayName || "",
+        sessionUser.user_metadata?.avatar || ""
+      );
+
+      if (active) {
+        setLoading(false);
+      }
+    };
+
+    // 1. Check current session immediately
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (active) {
+        handleUserSession(session?.user || null);
+      }
+    }).catch(err => {
+      console.error("Error retrieving initial Supabase session:", err);
+      if (active) {
+        setLoading(false);
+      }
     });
 
-    return () => unsubscribe();
+    // 2. Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      handleUserSession(session?.user || null);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async () => {
     setAuthError(null);
     try {
-      await signInWithGoogle();
-    } catch (error: any) {
-      console.error("Login failed:", error);
-      if (error.code === "auth/popup-blocked") {
-        setAuthError("Sign-in popup was blocked by your browser. Please allow popups for this site.");
-      } else if (error.code === "auth/cancelled-popup-request") {
-        // Ignore user cancellation
-      } else {
-        setAuthError(`Login failed: ${error.message || "Unknown error"}`);
+      if (!hasSupabaseKeys()) {
+        throw new Error("Supabase is not configured yet. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your secrets!");
       }
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      console.error("Supabase Google login failed:", error);
+      setAuthError(error.message || "Failed to start Google Sign In.");
     }
   };
 
-  const logout = () => auth.signOut();
+  const loginWithPhone = async (phone: string, password: string) => {
+    setAuthError(null);
+    try {
+      if (!hasSupabaseKeys()) {
+        throw new Error("Supabase is not configured yet. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your secrets!");
+      }
+      const trimmedPhone = phone.trim();
+      let email: string | null = null;
+
+      // 1. Query Firestore first as it holds mappings
+      try {
+        const mappingDoc = await getDoc(doc(db, "phone_mappings", trimmedPhone));
+        if (mappingDoc.exists()) {
+          email = mappingDoc.data().email;
+        }
+      } catch (err) {
+        console.warn("Firestore mappings lookup fallback query info:", err);
+      }
+
+      // 2. If not found in Firestore, query Supabase database as fallback
+      if (!email) {
+        try {
+          const { data, error } = await supabase
+            .from("phone_mappings")
+            .select("email")
+            .eq("phone", trimmedPhone)
+            .single();
+          if (data && !error) {
+            email = data.email;
+          }
+        } catch (supabaseErr) {
+          console.warn("Supabase query phone_mappings failed:", supabaseErr);
+        }
+      }
+
+      if (!email) {
+        throw new Error("No account is registered with this phone number.");
+      }
+
+      // Sign in using Supabase Auth with the email and password
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error: any) {
+      console.error("Supabase signin with phone failed:", error);
+      if (error.message?.includes("Invalid login credentials") || error.code === "invalid_grant") {
+        setAuthError("Incorrect phone number or password. Please verify and try again.");
+      } else {
+        setAuthError(error.message || "Authentication failed.");
+      }
+      throw error;
+    }
+  };
+
+  const registerWithPhone = async (name: string, phone: string, email: string, password: string) => {
+    setAuthError(null);
+    try {
+      if (!hasSupabaseKeys()) {
+        throw new Error("Supabase is not configured yet. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your secrets!");
+      }
+      const trimmedPhone = phone.trim();
+      const trimmedEmail = email.trim();
+
+      // Check if phone already registered in Firestore mapping or Supabase database
+      let phoneExists = false;
+      try {
+        const mappingDoc = await getDoc(doc(db, "phone_mappings", trimmedPhone));
+        if (mappingDoc.exists()) {
+          phoneExists = true;
+        }
+      } catch (err) {
+        console.warn("Firestore mapping query error:", err);
+      }
+
+      if (phoneExists) {
+        throw new Error("This mobile number is already registered.");
+      }
+
+      // Create Supabase user
+      const { data, error } = await supabase.auth.signUp({
+        email: trimmedEmail,
+        password: password,
+        options: {
+          data: {
+            displayName: name.trim(),
+            phone: trimmedPhone,
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name.trim())}`
+          }
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data.user) {
+        throw new Error("Sign up completed but no user record was returned by Supabase.");
+      }
+
+      const uid = data.user.id;
+
+      // Create Firestore mapping so that custom logins work
+      try {
+        await setDoc(doc(db, "phone_mappings", trimmedPhone), {
+          email: trimmedEmail,
+          uid: uid
+        });
+      } catch (fsErr) {
+        console.error("Failed to map phone in Firestore:", fsErr);
+      }
+
+      // Create Firestore profile record so real-time features sync seamlessly
+      const newProfileData = {
+        uid: uid,
+        displayName: name.trim(),
+        email: trimmedEmail,
+        phone: trimmedPhone,
+        photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name.trim())}`,
+        role: "student",
+        isVerified: false,
+        createdAt: serverTimestamp(),
+      };
+
+      try {
+        await setDoc(doc(db, "users", uid), newProfileData);
+        setProfile({ ...newProfileData, createdAt: new Date().toISOString() } as any);
+      } catch (fsErr) {
+        console.error("Failed to create Firestore profile record:", fsErr);
+      }
+
+      // Optional: Store in Supabase database public.users and public.phone_mappings if schema exists (will ignore failures gracefully)
+      try {
+        await supabase.from("phone_mappings").insert({
+          phone: trimmedPhone,
+          email: trimmedEmail,
+          uid: uid
+        });
+      } catch (sErr) {
+        console.debug("Optional supabase insert failed:", sErr);
+      }
+
+    } catch (error: any) {
+      console.error("Supabase registration failed:", error);
+      if (error.message?.includes("User already registered") || error.code === "23505") {
+        setAuthError("This email address or phone is already in use by another account.");
+      } else {
+        setAuthError(error.message || "Registration failed. Please verify your data and try again.");
+      }
+      throw error;
+    }
+  };
+
+  const sendPasswordReset = async (input: string) => {
+    setAuthError(null);
+    try {
+      if (!hasSupabaseKeys()) {
+        throw new Error("Supabase is not configured yet. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your secrets!");
+      }
+      const trimmedInput = input.trim();
+      let email = trimmedInput;
+      const isPhone = /^[+]?[0-9]{8,15}$/.test(trimmedInput);
+
+      if (isPhone) {
+        // Query phone mappings to get email
+        try {
+          const mappingDoc = await getDoc(doc(db, "phone_mappings", trimmedInput));
+          if (mappingDoc.exists()) {
+            email = mappingDoc.data().email;
+          } else {
+            // Also try Supabase query as fallback
+            const { data } = await supabase
+              .from("phone_mappings")
+              .select("email")
+              .eq("phone", trimmedInput)
+              .single();
+            if (data?.email) {
+              email = data.email;
+            } else {
+              throw new Error("This mobile number is not registered.");
+            }
+          }
+        } catch (err: any) {
+          throw new Error(err.message || "Could not retrieve email associated with this phone.");
+        }
+      }
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error: any) {
+      console.error("Supabase password reset failed:", error);
+      setAuthError(error.message || "Failed to initiate recovery instructions.");
+      throw error;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Sign-out error:", error);
+    }
+  };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, login, logout, authError }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      profile, 
+      loading, 
+      login, 
+      logout, 
+      loginWithPhone, 
+      registerWithPhone, 
+      sendPasswordReset, 
+      authError 
+    }}>
       {children}
     </AuthContext.Provider>
   );

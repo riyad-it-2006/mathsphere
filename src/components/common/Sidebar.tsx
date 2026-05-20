@@ -9,10 +9,12 @@ import {
   User, 
   Brain, 
   Settings,
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from "lucide-react";
 import { motion } from "motion/react";
 import { cn } from "@/src/lib/utils";
+import { useAuth } from "@/src/hooks/useAuth";
 
 const menuItems = [
   { icon: Home, label: "Dashboard", path: "/" },
@@ -25,6 +27,7 @@ const menuItems = [
 
 export const Sidebar = () => {
   const location = useLocation();
+  const { profile, logout } = useAuth();
 
   return (
     <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col border-r border-white/10 bg-[#0a0a0a]/80 backdrop-blur-xl lg:flex">
@@ -64,17 +67,28 @@ export const Sidebar = () => {
         })}
       </nav>
 
-      <div className="p-4">
-        <div className="flex items-center gap-3 rounded-2xl bg-white/5 p-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-gray-300">
-            <User className="h-5 w-5" />
+      <div className="p-4 space-y-2">
+        <Link to="/profile" className="flex items-center gap-3 rounded-2xl bg-white/5 p-3 hover:bg-white/10 transition-colors">
+          <div className="h-10 w-10 rounded-xl overflow-hidden bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-gray-300">
+            {profile?.photoURL ? (
+              <img src={profile.photoURL} alt="avatar" className="h-full w-full object-cover" />
+            ) : (
+              <User className="h-5 w-5" />
+            )}
           </div>
-          <div className="flex flex-col overflow-hidden">
-            <span className="truncate text-sm font-semibold text-white">Math Dept</span>
-            <span className="truncate text-xs text-gray-500">G.B.C Student</span>
+          <div className="flex flex-col overflow-hidden max-w-[120px]">
+            <span className="truncate text-sm font-semibold text-white">{profile?.displayName || "Math Dept"}</span>
+            <span className="truncate text-xs text-gray-500 capitalize">{profile?.role || "G.B.C Student"}</span>
           </div>
-          <Settings className="ml-auto h-4 w-4 text-gray-500 cursor-pointer hover:text-white transition-colors" />
-        </div>
+        </Link>
+        
+        <button
+          onClick={logout}
+          className="w-full flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+        >
+          <LogOut className="h-5 w-5 text-red-500" />
+          <span className="text-left font-black uppercase text-[10px] tracking-wider">Sign Out</span>
+        </button>
       </div>
     </aside>
   );

@@ -8,6 +8,7 @@
         "uid": { "type": "string" },
         "displayName": { "type": "string" },
         "email": { "type": "string" },
+        "phone": { "type": "string" },
         "photoURL": { "type": "string" },
         "batch": { "type": "string" },
         "session": { "type": "string" },
@@ -18,6 +19,16 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email", "role"]
+    },
+    "PhoneMapping": {
+      "title": "Phone Mapping",
+      "description": "Maps a phone number to an email and UID for login lookup",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "uid": { "type": "string" }
+      },
+      "required": ["email", "uid"]
     },
     "ChatRoom": {
       "title": "Chat Room",
@@ -124,6 +135,10 @@
     "/notices/{noticeId}": {
       "schema": "Notice",
       "description": "Official announcements"
+    },
+    "/phone_mappings/{phone}": {
+      "schema": "PhoneMapping",
+      "description": "Mapping from phone number to email address for custom authentication"
     }
   }
 }

@@ -11,7 +11,7 @@ import { cn } from "@/src/lib/utils";
 
 export const Profile = () => {
   const { uid: paramUid } = useParams();
-  const { profile: loggedInProfile, user: currentUser } = useAuth();
+  const { profile: loggedInProfile, user: currentUser, logout } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -218,12 +218,21 @@ export const Profile = () => {
             </div>
           </div>
           {isOwnProfile && !isEditing && (
-            <button 
-              onClick={() => setIsEditing(true)}
-              className="absolute bottom-4 right-6 flex items-center gap-2 rounded-xl bg-white/20 px-4 py-2 text-xs font-bold text-white backdrop-blur-md hover:bg-white/30 transition-all border border-white/10"
-            >
-              <Edit3 className="h-4 w-4" /> Edit Profile
-            </button>
+            <div className="absolute bottom-4 right-6 flex items-center gap-3">
+              <button 
+                onClick={() => setIsEditing(true)}
+                className="flex items-center gap-2 rounded-xl bg-white/20 px-4 py-2 text-xs font-bold text-white backdrop-blur-md hover:bg-white/30 transition-all border border-white/10 cursor-pointer"
+              >
+                <Edit3 className="h-4 w-4" /> Edit Profile
+              </button>
+              <button 
+                onClick={logout}
+                className="flex items-center gap-2 rounded-xl bg-red-500/80 hover:bg-red-600 active:scale-95 px-4 py-2 text-xs font-bold text-white backdrop-blur-md transition-all border border-red-500/20 cursor-pointer"
+                title="Log Out from App"
+              >
+                <X className="h-4 w-4" /> Sign Out
+              </button>
+            </div>
           )}
 
           {isEditing && (
