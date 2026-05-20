@@ -114,6 +114,43 @@ export const Profile = () => {
         newIdCardUrl = await getDownloadURL(uploadResult.ref);
       }
 
+      // Sync phone mapping if changed
+      const oldPhone = (profile.phoneNumber || "").trim();
+      const newPhone = (editedProfile.phoneNumber || "").trim();
+
+      if (newPhone !== oldPhone) {
+        if (newPhone) {
+          if (!/^[+]?[0-9]{8,15}$/.test(newPhone)) {
+            setError("Invalid phone number format. Please provide 8 to 15 digits.");
+            setIsSaving(false);
+            return;
+          }
+
+          // Check if already registered by another account
+          const mappingDoc = await getDoc(doc(db, "phone_mappings", newPhone));
+          if (mappingDoc.exists() && mappingDoc.data().uid !== profile.uid) {
+            setError("This phone number is already registered to another account.");
+            setIsSaving(false);
+            return;
+          }
+
+          // Save new phone mapping
+          await setDoc(doc(db, "phone_mappings", newPhone), {
+            email: profile.email || "",
+            uid: profile.uid
+          });
+        }
+
+        // Delete old phone mapping if empty or changed
+        if (oldPhone) {
+          try {
+            await deleteDoc(doc(db, "phone_mappings", oldPhone));
+          } catch (delErr) {
+            console.warn("Could not delete old phone mapping:", delErr);
+          }
+        }
+      }
+
       const userRef = doc(db, "users", profile.uid);
       const updatedData = {
         displayName: editedProfile.displayName,

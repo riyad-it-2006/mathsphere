@@ -242,7 +242,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (!data.user) {
-        throw new Error("Sign up completed but no user record was returned by Supabase.");
+        throw new Error(
+          "This email address is already registered in Supabase (possibly via Google or another login). Please log in instead, or use a different email address.\n" +
+          "(এই ইমেইল অ্যাড্রেসটি ইতিপূর্বে রেজিস্টার করা হয়েছে। দয়া করে লগইন করুন অথবা অন্য কোনো ইমেইল ব্যবহার করে চেষ্টা করুন।)"
+        );
       }
 
       const uid = data.user.id;
