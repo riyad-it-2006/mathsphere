@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { 
   Plus, 
   MessageSquare, 
@@ -9,12 +9,14 @@ import {
   Clock,
   Sparkles,
   Bell,
-  Brain
+  Brain,
+  Download
 } from "lucide-react";
 import { motion } from "motion/react";
 import { Link } from "react-router-dom";
-import { collection, getDocs, addDoc, serverTimestamp, query, limit, where } from "firebase/firestore";
+import { collection, getDocs, addDoc, serverTimestamp, query, limit, where, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/src/lib/firebase";
+import { formatDate } from "@/src/lib/utils";
 
 export const Dashboard = () => {
   const lang = localStorage.getItem("app_lang") || "en";
@@ -26,37 +28,81 @@ export const Dashboard = () => {
       heroSub: "The official community platform for the Mathematics Department of Govt. Bhola College. Connect, share notes, and solve complex problems with AI assistance.",
       startDisc: "Start Discussion",
       browseNotes: "Browse Notes",
-      deptActivity: "Department Activity",
       viewAll: "View all",
       recentNotices: "Recent Notices",
       viewNoticeBoard: "View Notice Board",
       groupChat: "Group Chat",
       notesDocs: "Notes & Docs",
       discussions: "Discussions",
-      mathAi: "Math AI"
+      mathAi: "Math AI",
+      recentDiscussions: "Recent Discussions",
+      recentNotes: "Recent Shared Notes",
+      noDiscussions: "No discussions raised yet. Be the first to start one!",
+      noNotes: "No shared notes available yet. Upload yours today!",
+      noNotices: "No active notices on the board."
     },
     bn: {
       welcome: "কমিউনিটিতে স্বাগতম",
-      heroTitle: "ম্যাথস্ফেয়ার: একসাথে গণিত এগিয়ে নিয়ে যাওয়া।",
+      heroTitle: "ম্যাপস্ফেয়ার: একসাথে গণিত এগিয়ে নিয়ে যাওয়া।",
       heroSub: "সরকারি ভোলা কলেজের গণিত বিভাগের অফিসিয়াল কমিউনিটি প্ল্যাটফর্ম। সংযুক্ত হন, নোট শেয়ার করুন এবং এআই এর সাহায্যে জটিল সমস্যা সমাধান করুন।",
       startDisc: "আলোচনা শুরু করুন",
       browseNotes: "নোট দেখুন",
-      deptActivity: "বিভাগের কার্যক্রম",
       viewAll: "সব দেখুন",
       recentNotices: "সাম্প্রতিক নোটিশ",
       viewNoticeBoard: "নোটিশ বোর্ড দেখুন",
       groupChat: "গ্রুপ চ্যাট",
       notesDocs: "নোট এবং নথি",
       discussions: "আলোচনা",
-      mathAi: "ম্যাথ এআই"
+      mathAi: "ম্যাথ এআই",
+      recentDiscussions: "সাম্প্রতিক আলোচনা সমূহ",
+      recentNotes: "সাম্প্রতিক শেয়ারকৃত গণিত নোট",
+      noDiscussions: "এখনো কোনো আলোচনা শুরু হয়নি। প্রথম আলোচনাটি আপনি শুরু করুন!",
+      noNotes: "এখনো কোনো নোট শেয়ার করা হয়নি। আজই আপনারটি আপলোড করুন!",
+      noNotices: "নোটিশ বোর্ডে কোনো সক্রিয় নোটিশ নেই।"
     }
   };
 
   const t = translations[lang as 'en' | 'bn'] || translations.en;
 
+  const [discussions, setDiscussions] = useState<any[]>([]);
+  const [notes, setNotes] = useState<any[]>([]);
+  const [notices, setNotices] = useState<any[]>([]);
+
+  // Fetch real-time discussions
+  useEffect(() => {
+    const q = query(collection(db, "discussions"), orderBy("createdAt", "desc"), limit(3));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setDiscussions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.error("Discussions fetch error:", error);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch real-time notes
+  useEffect(() => {
+    const q = query(collection(db, "notes"), orderBy("createdAt", "desc"), limit(3));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setNotes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.error("Notes fetch error:", error);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch real-time notices
+  useEffect(() => {
+    const q = query(collection(db, "notices"), orderBy("createdAt", "desc"), limit(2));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setNotices(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.error("Notices fetch error:", error);
+    });
+    return () => unsubscribe();
+  }, []);
+
   useEffect(() => {
     const initRooms = async () => {
-      // Query only for public rooms as per rules
       const q = query(collection(db, "chatRooms"), where("type", "==", "public"), limit(1));
       const snapshot = await getDocs(q);
       if (snapshot.empty) {
@@ -121,12 +167,12 @@ export const Dashboard = () => {
       </section>
 
       {/* Feature Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Stats / Activity */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Real-time Discussions */}
         <div className="glass-card p-8 space-y-6 lg:col-span-2">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-orange-500" /> {t.deptActivity}
+              <MessageSquare className="h-5 w-5 text-orange-500" /> {t.recentDiscussions}
             </h2>
             <Link to="/discussions" className="text-xs font-bold text-orange-500 hover:underline flex items-center gap-1">
               {t.viewAll} <ArrowRight className="h-3 w-3" />
@@ -134,28 +180,38 @@ export const Dashboard = () => {
           </div>
           
           <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="group flex items-center gap-4 rounded-2xl bg-white/5 p-4 transition-colors hover:bg-white/10 cursor-pointer border border-white/5">
-                <div className="h-12 w-12 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-500 font-bold">
-                  {i}
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-sm font-bold text-white group-hover:text-orange-400 transition-colors">Complex Analysis: Chapter 4 Discussion</h3>
-                  <p className="text-xs text-gray-500 mt-1">24 comments • Active 5m ago</p>
-                </div>
-                <div className="flex -space-x-2">
-                  {[1, 2, 3].map(u => (
-                    <div key={u} className="h-7 w-7 rounded-full border-2 border-[#0a0a0a] bg-gray-700 overflow-hidden">
-                      <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=user${i}${u}`} alt="user" />
+            {discussions.length === 0 ? (
+              <p className="text-sm text-gray-500 italic p-4 text-center">{t.noDiscussions}</p>
+            ) : (
+              discussions.map((disc) => (
+                <Link 
+                  to="/discussions"
+                  key={disc.id} 
+                  className="group flex items-center gap-4 rounded-2xl bg-white/5 p-4 transition-colors hover:bg-white/10 cursor-pointer border border-white/5"
+                >
+                  <div className="h-12 w-12 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 font-bold shrink-0">
+                    <MessageSquare className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-bold text-white group-hover:text-orange-400 transition-colors truncate">{disc.title}</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Posted by {disc.authorName || "Anonymous"} • {disc.createdAt ? formatDate(disc.createdAt) : "Just now"}
+                    </p>
+                  </div>
+                  {disc.tags && disc.tags.length > 0 && (
+                    <div className="hidden sm:flex gap-1.5">
+                      {disc.tags.slice(0, 2).map((tag: string, index: number) => (
+                        <span key={index} className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-gray-400 font-medium">#{tag}</span>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+                  )}
+                </Link>
+              ))
+            )}
           </div>
         </div>
 
-        {/* Quick Actions / Notices */}
+        {/* Quick Notices */}
         <div className="glass-card p-8 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
@@ -163,31 +219,84 @@ export const Dashboard = () => {
             </h2>
           </div>
           <div className="space-y-4">
-            <div className="rounded-2xl bg-purple-500/10 p-4 border border-purple-500/20 relative overflow-hidden group hover:scale-[1.02] transition-transform">
-              <div className="relative z-10">
-                <span className="text-[10px] font-black uppercase text-purple-400">Exam Alert</span>
-                <h3 className="mt-1 text-sm font-bold text-white">Final Semester Schedule Out</h3>
-                <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
-                  <Clock className="h-3 w-3" /> Posted 1h ago
-                </div>
-              </div>
-              <div className="absolute -right-4 -bottom-4 h-16 w-16 bg-purple-500/20 blur-2xl group-hover:bg-purple-500/40 transition-colors" />
-            </div>
-
-            <div className="rounded-2xl bg-blue-500/10 p-4 border border-blue-500/20 relative overflow-hidden group hover:scale-[1.02] transition-transform">
-              <div className="relative z-10">
-                <span className="text-[10px] font-black uppercase text-blue-400">Assignment</span>
-                <h3 className="mt-1 text-sm font-bold text-white">Linear Algebra Project Due</h3>
-                <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
-                  <Clock className="h-3 w-3" /> Posted 5h ago
-                </div>
-              </div>
-              <div className="absolute -right-4 -bottom-4 h-16 w-16 bg-blue-500/20 blur-2xl group-hover:bg-blue-500/40 transition-colors" />
-            </div>
+            {notices.length === 0 ? (
+              <p className="text-sm text-gray-500 italic p-4 text-center">{t.noNotices}</p>
+            ) : (
+              notices.map((notice) => (
+                <Link
+                  to="/notices"
+                  key={notice.id}
+                  className="block rounded-2xl bg-purple-500/10 p-4 border border-purple-500/20 relative overflow-hidden group hover:scale-[1.02] transition-transform"
+                >
+                  <div className="relative z-10">
+                    <span className="text-[10px] font-black uppercase text-purple-400">{notice.category || "Notice"}</span>
+                    <h3 className="mt-1 text-sm font-bold text-white line-clamp-2">{notice.title}</h3>
+                    <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
+                      <Clock className="h-3 w-3" /> Posted {notice.createdAt ? formatDate(notice.createdAt) : "Just now"}
+                    </div>
+                  </div>
+                  <div className="absolute -right-4 -bottom-4 h-16 w-16 bg-purple-500/20 blur-2xl group-hover:bg-purple-500/40 transition-colors" />
+                </Link>
+              ))
+            )}
           </div>
           <Link to="/notices" className="w-full block text-center rounded-2xl border border-white/10 bg-white/5 py-4 text-xs font-bold text-gray-400 hover:bg-white/10 hover:text-white transition-all uppercase tracking-widest">
             {t.viewNoticeBoard}
           </Link>
+        </div>
+
+        {/* Real-time Notes Column (Span 3 to sit elegantly on next row) */}
+        <div className="glass-card p-8 space-y-6 lg:col-span-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+              <FileText className="h-5 w-5 text-blue-500" /> {t.recentNotes}
+            </h2>
+            <Link to="/notes" className="text-xs font-bold text-blue-500 hover:underline flex items-center gap-1">
+              {t.viewAll} <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {notes.length === 0 ? (
+              <div className="col-span-3 text-center py-6">
+                <p className="text-sm text-gray-500 italic">{t.noNotes}</p>
+              </div>
+            ) : (
+              notes.map((note) => (
+                <div 
+                  key={note.id} 
+                  className="rounded-2xl bg-white/5 p-5 border border-white/5 flex flex-col justify-between hover:border-blue-500/30 transition-all group"
+                >
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="px-2 py-1 rounded-md bg-blue-500/10 text-[9px] font-black text-blue-400 uppercase tracking-widest">
+                        {note.courseCode}
+                      </span>
+                      <span className="text-[9px] text-gray-500 font-bold">{note.year}</span>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors line-clamp-1">{note.title}</h3>
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{note.description || "No description provided."}</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 mt-4 border-t border-white/5 flex items-center justify-between">
+                    <span className="text-[10px] text-gray-500 font-medium truncate max-w-[120px]">
+                      By {note.uploaderName || "Anonymous"}
+                    </span>
+                    <a
+                      href={note.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 text-blue-400 group-hover:bg-blue-500 group-hover:text-white text-xs font-black uppercase transition-all"
+                    >
+                      <Download className="h-3 w-3" /> Download
+                    </a>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
         {/* Categories / Sections */}

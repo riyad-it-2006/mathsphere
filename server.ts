@@ -25,7 +25,7 @@ async function startServer() {
   app.post("/api/ai/chat", async (req, res) => {
     try {
       const { message, context, image } = req.body;
-      const model = "gemini-3-flash-preview";
+      const model = "gemini-3.5-flash";
       
       const contents: any[] = [];
       const parts: any[] = [];
@@ -68,7 +68,7 @@ async function startServer() {
     try {
       const { text } = req.body;
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-3.5-flash",
         contents: `Summarize the following mathematical notes into key concepts and formulas. Use LaTeX for math: \n\n${text}`,
       });
       res.json({ summary: response.text });

@@ -116,7 +116,7 @@ export const Notes = () => {
               className="w-full bg-white/5 rounded-2xl py-3 pl-10 pr-4 text-xs text-white border border-white/5 outline-none focus:border-blue-500/30 transition-all min-w-[280px]"
             />
           </div>
-          {isAuthorized && (
+          {user && (
             <button 
               onClick={() => setIsUploading(true)}
               className="flex items-center gap-2 rounded-2xl bg-blue-500 px-6 py-3 text-xs font-black text-white shadow-xl shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all"
@@ -178,10 +178,10 @@ export const Notes = () => {
             </div>
 
             <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Select File (PNG, JPG, PDF, DOCX)</label>
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Select File (Any Format: PDF, DOCX, ZIP, Image, etc.)</label>
               <div className="flex items-center gap-4">
                 <label className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white/5 border-2 border-dashed border-white/10 p-6 hover:border-blue-500/50 cursor-pointer transition-all">
-                  <input type="file" className="hidden" onChange={handleFileChange} accept=".png,.jpg,.jpeg,.pdf,.docx" />
+                  <input type="file" className="hidden" onChange={handleFileChange} />
                   <Paperclip className="h-5 w-5 text-blue-500" />
                   <span className="text-sm text-gray-400 truncate max-w-[300px]">
                     {file ? file.name : "Select Document"}

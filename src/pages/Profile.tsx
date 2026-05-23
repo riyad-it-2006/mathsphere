@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { Shield, Mail, Calendar, Hash, Award, Edit3, User as UserIcon, Save, X, Camera, FileUp, Facebook, Phone, ExternalLink, AtSign, Loader2 } from "lucide-react";
-import { useAuth } from "@/src/hooks/useAuth";
+import { useAuth, normalizePhone } from "@/src/hooks/useAuth";
 import { doc, updateDoc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/src/lib/firebase";
@@ -117,6 +117,8 @@ export const Profile = () => {
       // Sync phone mapping if changed
       const oldPhone = (profile.phoneNumber || "").trim();
       const newPhone = (editedProfile.phoneNumber || "").trim();
+      const oldNormalized = oldPhone ? normalizePhone(oldPhone) : "";
+      const newNormalized = newPhone ? normalizePhone(newPhone) : "";
 
       if (newPhone !== oldPhone) {
         if (newPhone) {
@@ -133,18 +135,37 @@ export const Profile = () => {
             setIsSaving(false);
             return;
           }
+          if (newNormalized !== newPhone) {
+            const normDoc = await getDoc(doc(db, "phone_mappings", newNormalized));
+            if (normDoc.exists() && normDoc.data().uid !== profile.uid) {
+              setError("This phone number (normalized) is already registered to another account.");
+              setIsSaving(false);
+              return;
+            }
+          }
 
           // Save new phone mapping
           await setDoc(doc(db, "phone_mappings", newPhone), {
             email: profile.email || "",
-            uid: profile.uid
+            uid: profile.uid,
+            normalized: newNormalized
           });
+          if (newNormalized !== newPhone) {
+            await setDoc(doc(db, "phone_mappings", newNormalized), {
+              email: profile.email || "",
+              uid: profile.uid,
+              original: newPhone
+            });
+          }
         }
 
         // Delete old phone mapping if empty or changed
         if (oldPhone) {
           try {
             await deleteDoc(doc(db, "phone_mappings", oldPhone));
+            if (oldNormalized && oldNormalized !== oldPhone) {
+              await deleteDoc(doc(db, "phone_mappings", oldNormalized));
+            }
           } catch (delErr) {
             console.warn("Could not delete old phone mapping:", delErr);
           }

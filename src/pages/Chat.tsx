@@ -172,61 +172,83 @@ export const Chat = () => {
 
         {/* Input Area */}
         <div className="p-8 pt-0">
-          <AnimatePresence>
-            {showImageInput && (
-              <motion.div 
-                initial={{ height: 0, opacity: 0, y: 10 }}
-                animate={{ height: "auto", opacity: 1, y: 0 }}
-                exit={{ height: 0, opacity: 0, y: 10 }}
-                className="mb-4 glass-card bg-orange-500/5 border border-orange-500/20 p-4 rounded-3xl overflow-hidden flex items-center gap-4"
-              >
-                <div className="h-10 w-10 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-500">
-                  <ImageIcon className="h-5 w-5" />
+          {!user ? (
+            <div className="glass-card bg-orange-500/5 border border-orange-500/20 p-6 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-orange-500/10 text-orange-400 rounded-2xl shrink-0">
+                  <MessageSquare className="h-6 w-6" />
                 </div>
-                <input 
-                  autoFocus
-                  placeholder="Paste Image URL here..."
-                  className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-gray-600"
-                  value={imageUrl}
-                  onChange={e => setImageUrl(e.target.value)}
-                />
-                <button onClick={() => {setShowImageInput(false); setImageUrl("");}} className="text-gray-500 hover:text-white">
-                  <X className="h-4 w-4" />
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <form 
-            onSubmit={handleSendMessage}
-            className="glass-card bg-[#0a0a0a]/80 border border-white/10 p-2 flex items-center gap-2 focus-within:border-orange-500/40 transition-all rounded-[2.5rem] shadow-2xl group"
-          >
-            <button 
-              type="button" 
-              onClick={() => setShowImageInput(!showImageInput)}
-              className={cn(
-                "p-4 rounded-full transition-all",
-                showImageInput ? "bg-orange-500 text-white" : "text-gray-500 hover:text-white hover:bg-white/5"
-              )}
-            >
-              <ImageIcon className="h-5 w-5" />
-            </button>
-            <input 
-              value={inputText}
-              onChange={e => setInputText(e.target.value)}
-              placeholder="Write something to the community..."
-              className="flex-1 bg-transparent py-4 px-2 text-sm text-white placeholder-gray-600 outline-none"
-            />
-            <div className="flex items-center gap-2 pr-2">
-              <button 
-                type="submit"
-                disabled={!inputText.trim() && !imageUrl}
-                className="h-14 w-14 rounded-full bg-orange-500 flex items-center justify-center text-white shadow-xl shadow-orange-500/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:hover:scale-100"
+                <div>
+                  <h4 className="text-sm font-black text-white uppercase tracking-wider">Join GBC mathematics portal to chat</h4>
+                  <p className="text-xs text-gray-500">You are currently viewing in read-only mode.</p>
+                </div>
+              </div>
+              <Link
+                to="/login"
+                className="w-full sm:w-auto text-center px-6 py-3 shrink-0 rounded-2xl bg-orange-500 hover:bg-orange-600 font-black text-xs text-white uppercase tracking-wider transition-all"
               >
-                <Send className="h-6 w-6" />
-              </button>
+                Sign In
+              </Link>
             </div>
-          </form>
+          ) : (
+            <>
+              <AnimatePresence>
+                {showImageInput && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0, y: 10 }}
+                    animate={{ height: "auto", opacity: 1, y: 0 }}
+                    exit={{ height: 0, opacity: 0, y: 10 }}
+                    className="mb-4 glass-card bg-orange-500/5 border border-orange-500/20 p-4 rounded-3xl overflow-hidden flex items-center gap-4"
+                  >
+                    <div className="h-10 w-10 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-500">
+                      <ImageIcon className="h-5 w-5" />
+                    </div>
+                    <input 
+                      autoFocus
+                      placeholder="Paste Image URL here..."
+                      className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-gray-600"
+                      value={imageUrl}
+                      onChange={e => setImageUrl(e.target.value)}
+                    />
+                    <button onClick={() => {setShowImageInput(false); setImageUrl("");}} className="text-gray-500 hover:text-white">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <form 
+                onSubmit={handleSendMessage}
+                className="glass-card bg-[#0a0a0a]/80 border border-white/10 p-2 flex items-center gap-2 focus-within:border-orange-500/40 transition-all rounded-[2.5rem] shadow-2xl group"
+              >
+                <button 
+                  type="button" 
+                  onClick={() => setShowImageInput(!showImageInput)}
+                  className={cn(
+                    "p-4 rounded-full transition-all",
+                    showImageInput ? "bg-orange-500 text-white" : "text-gray-500 hover:text-white hover:bg-white/5"
+                  )}
+                >
+                  <ImageIcon className="h-5 w-5" />
+                </button>
+                <input 
+                  value={inputText}
+                  onChange={e => setInputText(e.target.value)}
+                  placeholder="Write something to the community..."
+                  className="flex-1 bg-transparent py-4 px-2 text-sm text-white placeholder-gray-600 outline-none"
+                />
+                <div className="flex items-center gap-2 pr-2">
+                  <button 
+                    type="submit"
+                    disabled={!inputText.trim() && !imageUrl}
+                    className="h-14 w-14 rounded-full bg-orange-500 flex items-center justify-center text-white shadow-xl shadow-orange-500/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:hover:scale-100"
+                  >
+                    <Send className="h-6 w-6" />
+                  </button>
+                </div>
+              </form>
+            </>
+          )}
         </div>
       </div>
     </div>

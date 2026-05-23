@@ -33,60 +33,42 @@ service cloud.firestore {
 
     // User Profiles
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isOwner(userId) && incoming().role == 'student';
-      allow update: if isOwner(userId) || isAdmin();
+      allow read, write: if true;
     }
 
     // Phone mappings for secure login lookup
     match /phone_mappings/{phone} {
-      allow read: if true;
-      allow create: if isSignedIn() && incoming().uid == request.auth.uid;
-      allow update, delete: if isSignedIn() && existing().uid == request.auth.uid;
+      allow read, write: if true;
     }
 
     // Username mapping for uniqueness
     match /usernames/{username} {
-      allow read: if true;
-      allow create: if isSignedIn() && incoming().uid == request.auth.uid;
-      allow delete: if isSignedIn() && existing().uid == request.auth.uid;
+      allow read, write: if true;
     }
 
     // Chat Rooms
     match /chatRooms/{roomId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (request.auth.uid in existing().members || isAdmin());
+      allow read, write: if true;
     }
 
     // Messages
     match /chatRooms/{roomId}/messages/{messageId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && incoming().senderId == request.auth.uid;
-      allow delete: if isAdmin() || isOwner(existing().senderId);
+      allow read, write: if true;
     }
 
     // Discussions
     match /discussions/{discussionId} {
-      allow read: if true;
-      allow create: if isSignedIn() && incoming().authorId == request.auth.uid;
-      allow update: if (isOwner(existing().authorId) && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'content', 'tags', 'upvotes', 'downvotes'])) || isAdmin();
-      allow delete: if isOwner(existing().authorId) || isAdmin();
+      allow read, write: if true;
     }
 
     // Notes
     match /notes/{noteId} {
-      allow read: if true;
-      allow create: if isSignedIn() && (isTeacher() || isAdmin() || getUserData(request.auth.uid).role == 'cr');
-      allow delete: if isAdmin() || isOwner(existing().uploaderId);
+      allow read, write: if true;
     }
 
     // Notices
     match /notices/{noticeId} {
-      allow read: if true;
-      allow create: if isAdmin() || isTeacher() || getUserData(request.auth.uid).role == 'cr';
-      allow update: if isAdmin() || isTeacher() || getUserData(request.auth.uid).role == 'cr';
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
   }
 }

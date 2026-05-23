@@ -18,11 +18,12 @@ import { useAuth } from "@/src/hooks/useAuth";
 type AuthMode = "login" | "register" | "forgot";
 
 export const Login = () => {
-  const { login, loginWithPhone, registerWithPhone, sendPasswordReset, authError } = useAuth();
+  const { login, loginWithEmail, registerWithEmail, sendPasswordReset, authError } = useAuth();
   const [mode, setMode] = useState<AuthMode>("login");
   const [isLoading, setIsLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showSetupGuide, setShowSetupGuide] = useState(false);
 
   // Form states
   const [name, setName] = useState("");
@@ -62,12 +63,12 @@ export const Login = () => {
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone) return;
+    if (!validateEmail(email)) return;
     if (!password) return;
 
     setIsLoading(true);
     try {
-      await loginWithPhone(phone, password);
+      await loginWithEmail(email, password);
     } catch (err) {
       console.error(err);
     } finally {
@@ -78,13 +79,12 @@ export const Login = () => {
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    if (!validatePhone(phone)) return;
     if (!validateEmail(email)) return;
     if (password.length < 6) return;
 
     setIsLoading(true);
     try {
-      await registerWithPhone(name, phone, email, password);
+      await registerWithEmail(name, email, password);
     } catch (err) {
       console.error(err);
     } finally {
@@ -226,21 +226,21 @@ export const Login = () => {
               >
                 <div>
                   <h2 className="text-2xl font-black text-white tracking-tight">Access Hub</h2>
-                  <p className="text-xs text-gray-500 mt-1">Authenticate using your registered mobile credentials.</p>
+                  <p className="text-xs text-gray-500 mt-1">Authenticate using your registered email credentials.</p>
                 </div>
 
                 <div className="space-y-4">
-                  {/* Phone Input */}
+                  {/* Email Input */}
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">Mobile Number</label>
+                    <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">Email Address</label>
                     <div className="relative">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                       <input
-                        type="tel"
+                        type="email"
                         required
-                        placeholder="e.g. 01712345678"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value.replace(/[^0-9+]/g, ""))}
+                        placeholder="john.doe@gmail.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         className="w-full bg-white/5 hover:bg-white/10 focus:bg-white/10 outline-none border border-white/10 focus:border-orange-500/50 rounded-2xl pl-12 pr-4 py-4 text-sm text-white transition-all font-mono"
                       />
                     </div>
@@ -323,22 +323,6 @@ export const Login = () => {
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         className="w-full bg-white/5 hover:bg-white/10 focus:bg-white/10 outline-none border border-white/10 focus:border-orange-500/50 rounded-2xl pl-12 pr-4 py-3.5 text-sm text-white transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Phone Input */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">Mobile Number</label>
-                    <div className="relative">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                      <input
-                        type="tel"
-                        required
-                        placeholder="01712345678"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value.replace(/[^0-9+]/g, ""))}
-                        className="w-full bg-white/5 hover:bg-white/10 focus:bg-white/10 outline-none border border-white/10 focus:border-orange-500/50 rounded-2xl pl-12 pr-4 py-3.5 text-sm text-white transition-all font-mono"
                       />
                     </div>
                   </div>
@@ -465,15 +449,26 @@ export const Login = () => {
           </div>
 
           {/* Google Button */}
-          <button 
-            type="button"
-            onClick={handleGoogleLogin}
-            disabled={isLoading}
-            className="w-full flex items-center justify-center gap-4 rounded-[2rem] bg-white text-black px-8 py-4.5 text-xs font-black hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          >
-            <img src="https://www.google.com/favicon.ico" alt="google" className="h-4 w-4" />
-            <span>Continue with Google</span>
-          </button>
+          <div className="space-y-3">
+            <button 
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-4 rounded-[2rem] bg-white text-black px-8 py-4.5 text-xs font-black hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <img src="https://www.google.com/favicon.ico" alt="google" className="h-4 w-4" />
+              <span>Continue with Google</span>
+            </button>
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setShowSetupGuide(true)}
+                className="text-[10px] font-extrabold text-orange-500/80 hover:text-orange-500 hover:underline transition-all uppercase tracking-wider"
+              >
+                গুগল লগইন চালু করার নির্দেশিকা (Google Setup Guide)
+              </button>
+            </div>
+          </div>
 
           {/* Footer stats */}
           <div className="pt-6 border-t border-white/5 flex items-center justify-between select-none">
@@ -492,6 +487,89 @@ export const Login = () => {
 
         </motion.div>
       </div>
+
+      {/* Supabase Google Auth Setup Guide Modal */}
+      <AnimatePresence>
+        {showSetupGuide && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              className="w-full max-w-lg bg-[#0c0c0d] border border-white/10 rounded-3xl p-6 md:p-8 space-y-6 text-white shadow-2xl overflow-y-auto max-h-[90vh]"
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                    <img src="https://www.google.com/favicon.ico" alt="google" className="h-4 w-4" />
+                  </div>
+                  <h3 className="text-sm font-black uppercase tracking-wider text-orange-500">Google Auth Configuration</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowSetupGuide(false)}
+                  className="px-3 py-1 bg-white/5 hover:bg-white/14 text-white font-extrabold rounded-lg text-xs tracking-wider uppercase transition-all"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="space-y-4 text-xs leading-relaxed text-gray-300">
+                <p className="font-bold text-white text-sm">
+                  আপনার Supabase প্রজেক্টে গুগল লগইন চালু করার জন্য নিচের ৪টি সহজ ধাপ সম্পন্ন করুন:
+                </p>
+
+                <div className="space-y-3">
+                  <div className="p-3.5 bg-white/5 rounded-2xl space-y-1 border border-white/5">
+                    <span className="text-orange-500 font-black tracking-wider uppercase text-[10px] block">ধাপ ১: Supabase Dashboard</span>
+                    <p>আপনার Supabase একাউন্টে প্রবেশ করুন: <a href="https://supabase.com/dashboard" target="_blank" rel="noreferrer" className="text-orange-400 font-bold hover:underline">supabase.com/dashboard</a></p>
+                  </div>
+
+                  <div className="p-3.5 bg-white/5 rounded-2xl space-y-1 border border-white/5">
+                    <span className="text-orange-500 font-black tracking-wider uppercase text-[10px] block">ধাপ ২: Google Provider Select</span>
+                    <p>মেনু থেকে <strong>Authentication</strong> tab-এ যান, তারপর <strong>Providers</strong>-এ ক্লিক করে <strong>Google</strong> সিলেক্ট করুন এবং এটি <strong>Enabled</strong> করুন।</p>
+                  </div>
+
+                  <div className="p-3.5 bg-white/5 rounded-2xl space-y-1 border border-white/5">
+                    <span className="text-orange-500 font-black tracking-wider uppercase text-[10px] block">ধাপ ৩: OAuth Client Credentials</span>
+                    <p>গুগল ডেভলপার কনসোল থেকে আপনার <strong>Client ID</strong> এবং <strong>Client Secret</strong> কী দুইটি এনে Supabase-এর Google Provider সেটিংসে পেস্ট করে Save করুন।</p>
+                  </div>
+
+                  <div className="p-3.5 bg-white/5 rounded-2xl space-y-1 border border-white/5">
+                    <span className="text-orange-500 font-black tracking-wider uppercase text-[10px] block">ধাপ ৪: Callback URL Copy-Paste</span>
+                    <p className="mb-2">Google Cloud Console-এর <strong>Authorized redirect URIs</strong> বক্সে নিচের callback url টি কপি করে বসিয়ে দিন:</p>
+                    <code className="block bg-black/60 p-3 rounded-xl font-mono text-[11px] text-orange-400 select-all border border-orange-500/25 break-all text-center">
+                      https://fshohs.supabase.co/auth/v1/callback
+                    </code>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl">
+                  <p className="font-bold text-orange-400 mb-1">প্রোভাইডার আন-এনেবল্ড সমস্যাটি কেন হয়?</p>
+                  <p className="text-[11px] text-gray-400">
+                    Supabase গুগলের সাথে ওঅথ সিকিউরিটি গেটওয়ে রক্ষা করার জন্য এই ক্রিডেনশিয়ালগুলোর ওপর নির্ভর করে। আপনার Supabase কনসোল থেকে Google Provider অন করে কীগুলো সাবমিট করলেই "Continue with Google" বাটনটি ১০০% সুন্দরভাবে কাজ করা শুরু করবে।
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-white/10 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowSetupGuide(false)}
+                  className="w-full py-4 bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-black uppercase text-xs tracking-wider rounded-2rem transition-all"
+                >
+                  ঠিক আছে (Got It)
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
