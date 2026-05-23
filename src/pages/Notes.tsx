@@ -70,28 +70,42 @@ export const Notes = () => {
     setIsPublishing(true);
     setUploadProgress(0);
     try {
-      const fileRef = ref(storage, `notes/${Date.now()}_...uploaded_${file.name}`);
-      const uploadTask = uploadBytesResumable(fileRef, file);
+      const formData = new FormData();
+      formData.append("file", file);
 
       const fileUrl = await new Promise<string>((resolve, reject) => {
-        uploadTask.on(
-          "state_changed",
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(Math.round(progress));
-          },
-          (error) => {
-            reject(error);
-          },
-          async () => {
-            try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              resolve(downloadURL);
-            } catch (err) {
-              reject(err);
-            }
+        const xhr = new XMLHttpRequest();
+        
+        xhr.upload.addEventListener("progress", (event) => {
+          if (event.lengthComputable) {
+            const percentage = Math.round((event.loaded / event.total) * 100);
+            setUploadProgress(percentage);
           }
-        );
+        });
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              if (response.fileUrl) {
+                resolve(response.fileUrl);
+              } else {
+                reject(new Error("No URL returned from server"));
+              }
+            } catch (err) {
+              reject(new Error("Invalid server response"));
+            }
+          } else {
+            reject(new Error(`Server returned status code: ${xhr.status}`));
+          }
+        };
+
+        xhr.onerror = () => {
+          reject(new Error("Network error during file upload. Check your connection."));
+        };
+
+        xhr.open("POST", "/api/upload");
+        xhr.send(formData);
       });
 
       const fileType = file.name.split('.').pop()?.toUpperCase() || "PDF";
@@ -133,18 +147,18 @@ export const Notes = () => {
           </h1>
           <p className="text-gray-500 text-sm mt-1">Access verified study materials and academic resources.</p>
         </div>
-        <div className="flex gap-4">
-          <div className="relative">
+        <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+          <div className="relative flex-grow sm:flex-initial">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
             <input 
               placeholder="Search documents..."
-              className="w-full bg-white/5 rounded-2xl py-3 pl-10 pr-4 text-xs text-white border border-white/5 outline-none focus:border-blue-500/30 transition-all min-w-[280px]"
+              className="w-full bg-white/5 rounded-2xl py-3 pl-10 pr-4 text-xs text-white border border-white/5 outline-none focus:border-blue-500/30 transition-all sm:min-w-[240px]"
             />
           </div>
           {user && (
             <button 
               onClick={() => setIsUploading(true)}
-              className="flex items-center gap-2 rounded-2xl bg-blue-500 px-6 py-3 text-xs font-black text-white shadow-xl shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all"
+              className="flex items-center justify-center gap-2 rounded-2xl bg-blue-500 px-6 py-3 text-xs font-black text-white shadow-xl shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all shrink-0 w-full sm:w-auto"
             >
               <Upload className="h-4 w-4" /> Share Note
             </button>

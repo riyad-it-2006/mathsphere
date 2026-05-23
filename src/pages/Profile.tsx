@@ -105,28 +105,38 @@ export const Profile = () => {
 
       if (photoFile) {
         setPhotoUploadProgress(0);
-        const photoRef = ref(storage, `profiles/${profile.uid}_${Date.now()}`);
-        const uploadTask = uploadBytesResumable(photoRef, photoFile);
-        
+        const formData = new FormData();
+        formData.append("file", photoFile);
+
         newPhotoURL = await new Promise<string>((resolve, reject) => {
-          uploadTask.on(
-            "state_changed",
-            (snapshot) => {
-              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-              setPhotoUploadProgress(Math.round(progress));
-            },
-            (error) => {
-              reject(error);
-            },
-            async () => {
-              try {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                resolve(downloadURL);
-              } catch (err) {
-                reject(err);
-              }
+          const xhr = new XMLHttpRequest();
+          xhr.upload.addEventListener("progress", (event) => {
+            if (event.lengthComputable) {
+              const percentage = Math.round((event.loaded / event.total) * 100);
+              setPhotoUploadProgress(percentage);
             }
-          );
+          });
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const response = JSON.parse(xhr.responseText);
+                if (response.fileUrl) {
+                  resolve(response.fileUrl);
+                } else {
+                  reject(new Error("No URL returned for profile photo"));
+                }
+              } catch (err) {
+                reject(new Error("Invalid server response for profile photo"));
+              }
+            } else {
+              reject(new Error(`Server returned status code: ${xhr.status}`));
+            }
+          };
+          xhr.onerror = () => {
+            reject(new Error("Network error during profile photo upload."));
+          };
+          xhr.open("POST", "/api/upload");
+          xhr.send(formData);
         });
         setPhotoUploadProgress(null);
       }
@@ -134,28 +144,38 @@ export const Profile = () => {
       let newIdCardUrl = editedProfile.idCardUrl;
       if (idFile) {
         setIdUploadProgress(0);
-        const idRef = ref(storage, `id_cards/${profile.uid}_${Date.now()}`);
-        const uploadTask = uploadBytesResumable(idRef, idFile);
+        const formData = new FormData();
+        formData.append("file", idFile);
 
         newIdCardUrl = await new Promise<string>((resolve, reject) => {
-          uploadTask.on(
-            "state_changed",
-            (snapshot) => {
-              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-              setIdUploadProgress(Math.round(progress));
-            },
-            (error) => {
-              reject(error);
-            },
-            async () => {
-              try {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                resolve(downloadURL);
-              } catch (err) {
-                reject(err);
-              }
+          const xhr = new XMLHttpRequest();
+          xhr.upload.addEventListener("progress", (event) => {
+            if (event.lengthComputable) {
+              const percentage = Math.round((event.loaded / event.total) * 100);
+              setIdUploadProgress(percentage);
             }
-          );
+          });
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const response = JSON.parse(xhr.responseText);
+                if (response.fileUrl) {
+                  resolve(response.fileUrl);
+                } else {
+                  reject(new Error("No URL returned for ID card"));
+                }
+              } catch (err) {
+                reject(new Error("Invalid server response for ID card"));
+              }
+            } else {
+              reject(new Error(`Server returned status code: ${xhr.status}`));
+            }
+          };
+          xhr.onerror = () => {
+            reject(new Error("Network error during ID card upload."));
+          };
+          xhr.open("POST", "/api/upload");
+          xhr.send(formData);
         });
         setIdUploadProgress(null);
       }

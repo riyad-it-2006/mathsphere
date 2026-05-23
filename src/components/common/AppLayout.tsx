@@ -1,6 +1,7 @@
 import React from "react";
 import { Sidebar } from "./Sidebar";
 import { Navbar } from "./Navbar";
+import { MobileNav } from "./MobileNav";
 import { motion, AnimatePresence } from "motion/react";
 
 import { Facebook } from "lucide-react";
@@ -11,7 +12,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
       <Sidebar />
       <div className="flex flex-1 flex-col lg:ml-64">
         <Navbar />
-        <main className="flex-1 p-6 lg:p-10 pb-20">
+        <main className="flex-1 p-6 lg:p-10 pb-32 lg:pb-20">
           <AnimatePresence mode="wait">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -42,6 +43,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
           </footer>
         </main>
       </div>
+      <MobileNav />
     </div>
   );
 };
