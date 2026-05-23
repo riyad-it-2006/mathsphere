@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/src/lib/firebase";
+import { signInAnonymously } from "firebase/auth";
+import { db, auth } from "@/src/lib/firebase";
 import { supabase, hasSupabaseKeys } from "@/src/lib/supabase";
 import { UserProfile } from "@/src/types";
 
@@ -102,6 +103,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (active) {
         setUser(mapped);
+      }
+
+      // Ensure silent Firebase Auth sign-in so that Storage & Firestore rules mapping passed
+      try {
+        if (!auth.currentUser) {
+          await signInAnonymously(auth);
+        }
+      } catch (authErr) {
+        console.warn("Silent Firebase Auth sign in failed:", authErr);
       }
 
       await syncProfileFromFirestore(

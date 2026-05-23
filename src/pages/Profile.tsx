@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Shield, Mail, Calendar, Hash, Award, Edit3, User as UserIcon, Save, X, Camera, FileUp, Facebook, Phone, ExternalLink, AtSign, Loader2 } from "lucide-react";
 import { useAuth, normalizePhone } from "@/src/hooks/useAuth";
 import { doc, updateDoc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/src/lib/firebase";
 import { UserProfile } from "@/src/types";
 import { cn } from "@/src/lib/utils";
@@ -16,6 +16,8 @@ export const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [photoUploadProgress, setPhotoUploadProgress] = useState<number | null>(null);
+  const [idUploadProgress, setIdUploadProgress] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -102,16 +104,60 @@ export const Profile = () => {
       let newPhotoURL = editedProfile.photoURL;
 
       if (photoFile) {
+        setPhotoUploadProgress(0);
         const photoRef = ref(storage, `profiles/${profile.uid}_${Date.now()}`);
-        const uploadResult = await uploadBytes(photoRef, photoFile);
-        newPhotoURL = await getDownloadURL(uploadResult.ref);
+        const uploadTask = uploadBytesResumable(photoRef, photoFile);
+        
+        newPhotoURL = await new Promise<string>((resolve, reject) => {
+          uploadTask.on(
+            "state_changed",
+            (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              setPhotoUploadProgress(Math.round(progress));
+            },
+            (error) => {
+              reject(error);
+            },
+            async () => {
+              try {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                resolve(downloadURL);
+              } catch (err) {
+                reject(err);
+              }
+            }
+          );
+        });
+        setPhotoUploadProgress(null);
       }
 
       let newIdCardUrl = editedProfile.idCardUrl;
       if (idFile) {
+        setIdUploadProgress(0);
         const idRef = ref(storage, `id_cards/${profile.uid}_${Date.now()}`);
-        const uploadResult = await uploadBytes(idRef, idFile);
-        newIdCardUrl = await getDownloadURL(uploadResult.ref);
+        const uploadTask = uploadBytesResumable(idRef, idFile);
+
+        newIdCardUrl = await new Promise<string>((resolve, reject) => {
+          uploadTask.on(
+            "state_changed",
+            (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              setIdUploadProgress(Math.round(progress));
+            },
+            (error) => {
+              reject(error);
+            },
+            async () => {
+              try {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                resolve(downloadURL);
+              } catch (err) {
+                reject(err);
+              }
+            }
+          );
+        });
+        setIdUploadProgress(null);
       }
 
       // Sync phone mapping if changed
@@ -271,6 +317,12 @@ export const Profile = () => {
                 <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
                   <Camera className="h-6 w-6 mb-1" />
                   <span className="text-[8px] font-black uppercase">Change Photo</span>
+                </div>
+              )}
+              {photoUploadProgress !== null && (
+                <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center text-white">
+                  <span className="text-xs font-black text-orange-500">{photoUploadProgress}%</span>
+                  <span className="text-[7px] font-black uppercase tracking-wider mt-0.5 text-gray-400">Uploading</span>
                 </div>
               )}
             </div>
@@ -506,6 +558,12 @@ export const Profile = () => {
                     <span className="text-xs font-black text-white uppercase">Replace ID Card</span>
                   </div>
                 )}
+                {idUploadProgress !== null && (
+                  <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center text-white">
+                    <span className="text-xl font-black text-orange-400">{idUploadProgress}%</span>
+                    <span className="text-xs font-black uppercase tracking-wider mt-1 text-gray-400">Uploading ID CARD</span>
+                  </div>
+                )}
                 {!isEditing && (
                   <a 
                     href={profile.idCardUrl} 
@@ -521,19 +579,28 @@ export const Profile = () => {
               <div 
                 onClick={() => isEditing && idFileInputRef.current?.click()}
                 className={cn(
-                  "aspect-video w-full rounded-2xl bg-white/5 border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-gray-500 gap-4 group transition-all",
+                  "aspect-video w-full rounded-2xl bg-white/5 border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-gray-500 gap-4 group transition-all relative overflow-hidden",
                   isEditing ? "hover:border-blue-500/30 cursor-pointer" : "cursor-default"
                 )}
               >
-                <div className="h-16 w-16 rounded-full bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <FileUp className="h-8 w-8" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-bold text-white">Upload Statistics / College ID</p>
-                  <p className="text-xs">
-                    {isEditing ? "Click to upload your GBC ID card" : "No ID card uploaded yet"}
-                  </p>
-                </div>
+                {idUploadProgress !== null ? (
+                  <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center text-white">
+                    <span className="text-xl font-black text-orange-400">{idUploadProgress}%</span>
+                    <span className="text-xs font-black uppercase tracking-wider mt-1 text-gray-400">Uploading ID CARD</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="h-16 w-16 rounded-full bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <FileUp className="h-8 w-8" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-white">Upload Statistics / College ID</p>
+                      <p className="text-xs">
+                        {isEditing ? "Click to upload your GBC ID card" : "No ID card uploaded yet"}
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </section>

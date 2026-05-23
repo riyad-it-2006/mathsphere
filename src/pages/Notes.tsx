@@ -20,7 +20,7 @@ import {
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/src/lib/firebase";
 import { useAuth } from "@/src/hooks/useAuth";
 import { Note } from "@/src/types";
@@ -32,6 +32,7 @@ export const Notes = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [isUploading, setIsUploading] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [newNote, setNewNote] = useState({ title: "", description: "", course: "MAT-101", year: "1st Year" });
   const [file, setFile] = useState<File | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -67,10 +68,32 @@ export const Notes = () => {
     if (!user || !newNote.title || !file || isPublishing) return;
 
     setIsPublishing(true);
+    setUploadProgress(0);
     try {
-      const fileRef = ref(storage, `notes/${Date.now()}_${file.name}`);
-      const uploadResult = await uploadBytes(fileRef, file);
-      const fileUrl = await getDownloadURL(uploadResult.ref);
+      const fileRef = ref(storage, `notes/${Date.now()}_...uploaded_${file.name}`);
+      const uploadTask = uploadBytesResumable(fileRef, file);
+
+      const fileUrl = await new Promise<string>((resolve, reject) => {
+        uploadTask.on(
+          "state_changed",
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setUploadProgress(Math.round(progress));
+          },
+          (error) => {
+            reject(error);
+          },
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(downloadURL);
+            } catch (err) {
+              reject(err);
+            }
+          }
+        );
+      });
+
       const fileType = file.name.split('.').pop()?.toUpperCase() || "PDF";
 
       await addDoc(collection(db, "notes"), {
@@ -87,9 +110,11 @@ export const Notes = () => {
       setIsUploading(false);
       setNewNote({ title: "", description: "", course: "MAT-101", year: "1st Year" });
       setFile(null);
+      setUploadProgress(null);
     } catch (error: any) {
       console.error("Upload failed", error);
       setErrorMsg(error.message || "Failed to upload document. Check your connection or permissions.");
+      setUploadProgress(null);
     } finally {
       setIsPublishing(false);
     }
@@ -199,21 +224,39 @@ export const Notes = () => {
               </div>
             </div>
 
+            {isPublishing && uploadProgress !== null && (
+              <div className="space-y-1.5 pt-2">
+                <div className="flex justify-between items-center text-xs text-gray-400 font-black uppercase tracking-wider">
+                  <span>Uploading Document</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div className="w-full bg-white/5 rounded-full h-2 overflow-hidden border border-white/5">
+                  <div 
+                    className="bg-blue-500 h-full rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end gap-3 pt-4">
               <button 
                 type="button" 
+                disabled={isPublishing}
                 onClick={() => setIsUploading(false)} 
-                className="px-6 py-3 text-xs font-bold text-gray-500 hover:text-white transition-colors"
+                className="px-6 py-3 text-xs font-bold text-gray-500 hover:text-white transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button 
                 type="submit" 
                 disabled={isPublishing || !file}
-                className="bg-blue-500 text-white px-8 py-3 rounded-xl text-xs font-black disabled:opacity-50 flex items-center gap-2 shadow-xl shadow-blue-500/20"
+                className="relative bg-blue-500 text-white px-8 py-3 rounded-xl text-xs font-black disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl shadow-blue-500/20 overflow-hidden min-w-[140px]"
               >
-                {isPublishing && <Loader2 className="h-4 w-4 animate-spin" />}
-                Publish Note
+                <span className="relative z-10 flex items-center gap-2">
+                  {isPublishing && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {isPublishing ? `Uploading ${uploadProgress ?? 0}%` : "Publish Note"}
+                </span>
               </button>
             </div>
           </motion.form>
