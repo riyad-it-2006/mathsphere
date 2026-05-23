@@ -54,12 +54,44 @@ export const Notes = () => {
     setErrorMsg("");
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      if (selectedFile.size > 20 * 1024 * 1024) {
-        setErrorMsg("File too large. Max 20MB.");
+      if (selectedFile.size > 50 * 1024 * 1024) {
+        setErrorMsg("File too large. Maximum allowed size is 50MB. (ফাইলের সাইজ অনেক বড়। সর্বোচ্চ ৫০ মেগাবাইট ফাইল আপলোড করতে পারবেন।)");
         return;
       }
       setFile(selectedFile);
     }
+  };
+
+  const uploadToFirebaseStorage = (
+    selectedFile: File, 
+    directory: string,
+    onProgress: (progress: number) => void
+  ): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const cleanName = `${Date.now()}_${selectedFile.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+      const fileRef = ref(storage, `${directory}/${cleanName}`);
+      const uploadTask = uploadBytesResumable(fileRef, selectedFile);
+
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          onProgress(Math.round(progress));
+        },
+        (error) => {
+          console.error("Firebase fallback upload error:", error);
+          reject(error);
+        },
+        async () => {
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            resolve(downloadURL);
+          } catch (err) {
+            reject(err);
+          }
+        }
+      );
+    });
   };
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -70,10 +102,10 @@ export const Notes = () => {
     setIsPublishing(true);
     setUploadProgress(0);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
       const fileUrl = await new Promise<string>((resolve, reject) => {
+        const formData = new FormData();
+        formData.append("file", file);
+
         const xhr = new XMLHttpRequest();
         
         xhr.upload.addEventListener("progress", (event) => {
@@ -90,18 +122,30 @@ export const Notes = () => {
               if (response.fileUrl) {
                 resolve(response.fileUrl);
               } else {
-                reject(new Error("No URL returned from server"));
+                console.warn("Express upload did not return URL. Retrying via Firebase Storage...");
+                uploadToFirebaseStorage(file, "notes", setUploadProgress)
+                  .then(resolve)
+                  .catch(reject);
               }
             } catch (err) {
-              reject(new Error("Invalid server response"));
+              console.warn("Express response parse failed. Retrying via Firebase Storage...");
+              uploadToFirebaseStorage(file, "notes", setUploadProgress)
+                .then(resolve)
+                .catch(reject);
             }
           } else {
-            reject(new Error(`Server returned status code: ${xhr.status}`));
+            console.warn(`Express returned ${xhr.status}. Retrying via Firebase Storage...`);
+            uploadToFirebaseStorage(file, "notes", setUploadProgress)
+              .then(resolve)
+              .catch(reject);
           }
         };
 
         xhr.onerror = () => {
-          reject(new Error("Network error during file upload. Check your connection."));
+          console.warn("Express upload network error. Retrying via Firebase Storage...");
+          uploadToFirebaseStorage(file, "notes", setUploadProgress)
+            .then(resolve)
+            .catch(reject);
         };
 
         xhr.open("POST", "/api/upload");
@@ -217,7 +261,10 @@ export const Notes = () => {
             </div>
 
             <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Select File (Any Format: PDF, DOCX, ZIP, Image, etc.)</label>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 mb-1">
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Select File (Any Format: PDF, DOCX, ZIP, Image, etc.)</label>
+                <span className="text-[10px] font-extrabold text-red-500 uppercase tracking-wide px-1 whitespace-nowrap">* FILE LIMIT: 50MB MAX (সর্বোচ্চ ৫০ এমবি)</span>
+              </div>
               <div className="flex items-center gap-4">
                 <label className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white/5 border-2 border-dashed border-white/10 p-6 hover:border-blue-500/50 cursor-pointer transition-all">
                   <input type="file" className="hidden" onChange={handleFileChange} />

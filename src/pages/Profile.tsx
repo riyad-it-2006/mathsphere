@@ -25,6 +25,38 @@ export const Profile = () => {
   const [idPreview, setIdPreview] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const idFileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const uploadToFirebaseStorage = (
+    selectedFile: File, 
+    directory: string,
+    onProgress: (progress: number) => void
+  ): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const cleanName = `${Date.now()}_${selectedFile.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+      const fileRef = ref(storage, `${directory}/${cleanName}`);
+      const uploadTask = uploadBytesResumable(fileRef, selectedFile);
+
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          onProgress(Math.round(progress));
+        },
+        (error) => {
+          console.error("Firebase fallback upload error:", error);
+          reject(error);
+        },
+        async () => {
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            resolve(downloadURL);
+          } catch (err) {
+            reject(err);
+          }
+        }
+      );
+    });
+  };
   
   const [editedProfile, setEditedProfile] = useState({
     displayName: "",
@@ -105,10 +137,10 @@ export const Profile = () => {
 
       if (photoFile) {
         setPhotoUploadProgress(0);
-        const formData = new FormData();
-        formData.append("file", photoFile);
-
         newPhotoURL = await new Promise<string>((resolve, reject) => {
+          const formData = new FormData();
+          formData.append("file", photoFile);
+
           const xhr = new XMLHttpRequest();
           xhr.upload.addEventListener("progress", (event) => {
             if (event.lengthComputable) {
@@ -123,17 +155,29 @@ export const Profile = () => {
                 if (response.fileUrl) {
                   resolve(response.fileUrl);
                 } else {
-                  reject(new Error("No URL returned for profile photo"));
+                  console.warn("Express upload failed for photo, falling back to Firebase Storage...");
+                  uploadToFirebaseStorage(photoFile, `profiles`, setPhotoUploadProgress)
+                    .then(resolve)
+                    .catch(reject);
                 }
               } catch (err) {
-                reject(new Error("Invalid server response for profile photo"));
+                console.warn("Express parse failed for photo, falling back to Firebase Storage...");
+                uploadToFirebaseStorage(photoFile, `profiles`, setPhotoUploadProgress)
+                  .then(resolve)
+                  .catch(reject);
               }
             } else {
-              reject(new Error(`Server returned status code: ${xhr.status}`));
+              console.warn(`Express photo upload returned ${xhr.status}, falling back to Firebase Storage...`);
+              uploadToFirebaseStorage(photoFile, `profiles`, setPhotoUploadProgress)
+                .then(resolve)
+                .catch(reject);
             }
           };
           xhr.onerror = () => {
-            reject(new Error("Network error during profile photo upload."));
+            console.warn("Express photo upload network error, falling back to Firebase Storage...");
+            uploadToFirebaseStorage(photoFile, `profiles`, setPhotoUploadProgress)
+              .then(resolve)
+              .catch(reject);
           };
           xhr.open("POST", "/api/upload");
           xhr.send(formData);
@@ -144,10 +188,10 @@ export const Profile = () => {
       let newIdCardUrl = editedProfile.idCardUrl;
       if (idFile) {
         setIdUploadProgress(0);
-        const formData = new FormData();
-        formData.append("file", idFile);
-
         newIdCardUrl = await new Promise<string>((resolve, reject) => {
+          const formData = new FormData();
+          formData.append("file", idFile);
+
           const xhr = new XMLHttpRequest();
           xhr.upload.addEventListener("progress", (event) => {
             if (event.lengthComputable) {
@@ -162,17 +206,29 @@ export const Profile = () => {
                 if (response.fileUrl) {
                   resolve(response.fileUrl);
                 } else {
-                  reject(new Error("No URL returned for ID card"));
+                  console.warn("Express upload failed for ID card, falling back to Firebase Storage...");
+                  uploadToFirebaseStorage(idFile, `id_cards`, setIdUploadProgress)
+                    .then(resolve)
+                    .catch(reject);
                 }
               } catch (err) {
-                reject(new Error("Invalid server response for ID card"));
+                console.warn("Express parse failed for ID card, falling back to Firebase Storage...");
+                uploadToFirebaseStorage(idFile, `id_cards`, setIdUploadProgress)
+                  .then(resolve)
+                  .catch(reject);
               }
             } else {
-              reject(new Error(`Server returned status code: ${xhr.status}`));
+              console.warn(`Express ID card upload returned ${xhr.status}, falling back to Firebase Storage...`);
+              uploadToFirebaseStorage(idFile, `id_cards`, setIdUploadProgress)
+                .then(resolve)
+                .catch(reject);
             }
           };
           xhr.onerror = () => {
-            reject(new Error("Network error during ID card upload."));
+            console.warn("Express ID card upload network error, falling back to Firebase Storage...");
+            uploadToFirebaseStorage(idFile, `id_cards`, setIdUploadProgress)
+              .then(resolve)
+              .catch(reject);
           };
           xhr.open("POST", "/api/upload");
           xhr.send(formData);

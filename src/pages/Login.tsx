@@ -547,6 +547,28 @@ export const Login = () => {
                       https://fshohs.supabase.co/auth/v1/callback
                     </code>
                   </div>
+
+                  <div className="p-3.5 bg-white/5 rounded-2xl space-y-1 border border-white/5">
+                    <span className="text-orange-500 font-black tracking-wider uppercase text-[10px] block">ধাপ ৫: মোবাইল লগইন ডাটাবেজ (Supabase Table Setup)</span>
+                    <p className="mb-2">মোবাইল দিয়ে লগইন করার জন্য Supabase-এ <code>phone_mappings</code> টেবিল তৈরি করা আবশ্যক। নিচের SQL কোডটি কপি করে আপনার Supabase-এর <strong>SQL Editor</strong>-এ পেস্ট করে <strong>Run</strong> বাটনে চাপুন:</p>
+                    <pre className="block bg-black/60 p-3 rounded-xl font-mono text-[10px] text-green-400 select-all border border-green-500/20 whitespace-pre-wrap break-all text-left">
+{`CREATE TABLE IF NOT EXISTS public.phone_mappings (
+  phone TEXT PRIMARY KEY,
+  email TEXT NOT NULL,
+  uid UUID NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE public.phone_mappings ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for client reads & writes (like Firestore rules)
+CREATE POLICY "Allow public read" ON public.phone_mappings FOR SELECT USING (true);
+CREATE POLICY "Allow public insert" ON public.phone_mappings FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update" ON public.phone_mappings FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public delete" ON public.phone_mappings FOR DELETE USING (true);`}
+                    </pre>
+                  </div>
                 </div>
 
                 <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl">
